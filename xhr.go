@@ -43,7 +43,7 @@ const (
 
 type Request struct {
 	js.Object
-	ReadtState      int       `js:"readyState"`
+	ReadyState      int       `js:"readyState"`
 	Response        js.Object `js:"response"`
 	ResponseText    string    `js:"responseText"`
 	ResponseType    string    `js:"responseType"`
