@@ -69,6 +69,20 @@ func NewRequest() *Request {
 	return &Request{Object: o}
 }
 
+// ResponseHeaders returns all response headers.
+func (r *Request) ResponseHeaders() string {
+	return r.Call("getAllResponseHeaders").Str()
+}
+
+// ResponseHeader returns the value of the specified header.
+func (r *Request) ResponseHeader(name string) string {
+	value := r.Call("getResponseHeader", name)
+	if value.IsNull() {
+		return ""
+	}
+	return value.Str()
+}
+
 // Abort will abort the request. The corresponding Send will return
 // ErrAborted.
 func (r *Request) Abort() {
