@@ -41,6 +41,9 @@ const (
 	Done
 )
 
+// Request wraps an XMLHttpRequest. New instances have to be created
+// with NewRequest. Each instance may only be used for a single
+// request.
 type Request struct {
 	js.Object
 	ReadyState      int       `js:"readyState"`
@@ -64,6 +67,8 @@ var ErrAborted = errors.New("request aborted")
 // ErrTimeout is the error returned by Send when a request timed out.
 var ErrTimeout = errors.New("request timed out")
 
+// NewRequest creates a new XMLHttpRequest object, which may be used
+// for a single request.
 func NewRequest() *Request {
 	o := js.Global.Get("XMLHttpRequest").New()
 	return &Request{Object: o}
@@ -102,6 +107,9 @@ func (r *Request) Open(method, url, user, password string) {
 	// ONLY abort, or also a new request? also check the behaviour re
 	// the TODO in Abort.
 
+	if r.ch != nil {
+		panic("must not use a Request for multiple requests")
+	}
 	r.Call("open", method, url, true, user, password)
 }
 
@@ -110,6 +118,9 @@ func (r *Request) OverrideMimeType(mimetype string) {
 }
 
 func (r *Request) Send(data interface{}) error {
+	if r.ch != nil {
+		panic("must not use a Request for multiple requests")
+	}
 	r.ch = make(chan error, 1)
 	r.Call("addEventListener", "load", func() {
 		go func() { r.ch <- nil }()
@@ -122,7 +133,6 @@ func (r *Request) Send(data interface{}) error {
 	})
 	r.Call("send", data)
 	val := <-r.ch
-	r.ch = nil
 	return val
 }
 
