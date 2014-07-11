@@ -5,7 +5,8 @@
 // specify all desired details of the request's behaviour (timeout,
 // response format). It also allows access to response details such as
 // the status code. Furthermore, using this way is required if one
-// wants to abort in-flight requests.
+// wants to abort in-flight requests or if one wants to register
+// additional event listeners.
 //
 //   r := xhr.NewRequest()
 //   r.SetTimeout(time.Second)
@@ -18,13 +19,14 @@
 //
 //
 // The other way is via the package function Send, which is a helper
-// that constructs a Request internally and assigns sane defaults to
+// that internally constructs a Request and assigns sane defaults to
 // it. It's the easiest way of doing an XHR request that should just
 // return unprocessed data.
 //
 //     data, err := xhr.Send("GET", "/endpoint", "", "", nil)
 //     if err != nil { handle_error() }
 //     console.Log("Retrieved data", data)
+//
 package xhr
 
 import (
@@ -34,17 +36,20 @@ import (
 	"honnef.co/go/js/util"
 )
 
+// The possible values of Request.ReadyState.
 const (
+	// Open has not been called yet
 	Unsent = iota
+	// Send has not been called yet
 	Opened
 	HeadersReceived
 	Loading
 	Done
 )
 
-// Request wraps an XMLHttpRequest. New instances have to be created
-// with NewRequest. Each instance may only be used for a single
-// request.
+// Request wraps XMLHttpRequest objects. New instances have to be
+// created with NewRequest. Each instance may only be used for a
+// single request.
 type Request struct {
 	js.Object
 	util.EventTarget
@@ -104,7 +109,7 @@ func (r *Request) ResponseHeader(name string) string {
 }
 
 // Abort will abort the request. The corresponding Send will return
-// ErrAborted.
+// ErrAborted, unless the request has already succeeded.
 func (r *Request) Abort() {
 	if r.ch == nil {
 		return
@@ -117,21 +122,25 @@ func (r *Request) Abort() {
 	}
 }
 
+// Open initializes the request.
 func (r *Request) Open(method, url, user, password string) {
-	// TODO "is the equivalent of calling abort()" – does that mean
-	// ONLY abort, or also a new request? also check the behaviour re
-	// the TODO in Abort.
-
 	if r.ch != nil {
 		panic("must not use a Request for multiple requests")
 	}
 	r.Call("open", method, url, true, user, password)
 }
 
+// OverrideMimeType overrides the MIME type returned by the server.
 func (r *Request) OverrideMimeType(mimetype string) {
 	r.Call("overrideMimeType", mimetype)
 }
 
+// Send sends the request that was prepared with Open. The data
+// argument is optional and can either be a string payload, or a
+// js.Object containing an ArrayBufferView, Blob, Document or
+// Formdata.
+//
+// Send will block until a response was received or an error occured.
 func (r *Request) Send(data interface{}) error {
 	if r.ch != nil {
 		panic("must not use a Request for multiple requests")
@@ -151,10 +160,18 @@ func (r *Request) Send(data interface{}) error {
 	return val
 }
 
+// SetRequestHeader sets a header of the request.
 func (r *Request) SetRequestHeader(header, value string) {
 	r.Call("setRequestHeader", header, value)
 }
 
+// Send constructs a new Request, prepares it with Open and then sends
+// it. The response corresponds to the request's ResponseText field,
+// or the empty string in case of an error.
+//
+// Only errors of the network layer are treated as errors. HTTP status
+// codes 4xx and 5xx are not treated as errors. In order to check
+// status codes, use NewRequest instead.
 func Send(method, url, user, password string, data interface{}) (string, error) {
 	xhr := NewRequest()
 	xhr.Open(method, url, user, password)
