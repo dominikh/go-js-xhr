@@ -46,6 +46,15 @@ const (
 	Done
 )
 
+// The possible values of Request.ResponseType
+const (
+	ArrayBuffer = "arraybuffer"
+	Blob        = "blob"
+	Document    = "document"
+	JSON        = "json"
+	Text        = "text"
+)
+
 // Request wraps XMLHttpRequest objects. New instances have to be
 // created with NewRequest. Each instance may only be used for a
 // single request.
