@@ -8,10 +8,9 @@
 // wants to abort in-flight requests or if one wants to register
 // additional event listeners.
 //
-//   r := xhr.NewRequest()
+//   r := xhr.NewRequest("GET", "/endpoint")
 //   r.SetTimeout(time.Second)
 //   r.ResponseType = "document"
-//   r.Open("GET", "/endpoint", "", "")
 //   err := r.Send(nil)
 //   if err != nil { handle_error() }
 //   // r.Response will contain a JavaScript Document element that can
@@ -23,7 +22,7 @@
 // it. It's the easiest way of doing an XHR request that should just
 // return unprocessed data.
 //
-//     data, err := xhr.Send("GET", "/endpoint", "", "", nil)
+//     data, err := xhr.Send("GET", "/endpoint", nil)
 //     if err != nil { handle_error() }
 //     console.Log("Retrieved data", data)
 //
@@ -89,9 +88,11 @@ var ErrTimeout = errors.New("request timed out")
 
 // NewRequest creates a new XMLHttpRequest object, which may be used
 // for a single request.
-func NewRequest() *Request {
+func NewRequest(method, url string) *Request {
 	o := js.Global.Get("XMLHttpRequest").New()
-	return &Request{Object: o, EventTarget: util.EventTarget{Object: o}}
+	r := &Request{Object: o, EventTarget: util.EventTarget{Object: o}}
+	r.Call("open", method, url, true)
+	return r
 }
 
 // ResponseHeaders returns all response headers.
@@ -122,14 +123,6 @@ func (r *Request) Abort() {
 	}
 }
 
-// Open initializes the request.
-func (r *Request) Open(method, url, user, password string) {
-	if r.ch != nil {
-		panic("must not use a Request for multiple requests")
-	}
-	r.Call("open", method, url, true, user, password)
-}
-
 // OverrideMimeType overrides the MIME type returned by the server.
 func (r *Request) OverrideMimeType(mimetype string) {
 	r.Call("overrideMimeType", mimetype)
@@ -141,6 +134,10 @@ func (r *Request) OverrideMimeType(mimetype string) {
 // Formdata.
 //
 // Send will block until a response was received or an error occured.
+//
+// Only errors of the network layer are treated as errors. HTTP status
+// codes 4xx and 5xx are not treated as errors. In order to check
+// status codes, use the Request's Status field.
 func (r *Request) Send(data interface{}) error {
 	if r.ch != nil {
 		panic("must not use a Request for multiple requests")
@@ -165,16 +162,15 @@ func (r *Request) SetRequestHeader(header, value string) {
 	r.Call("setRequestHeader", header, value)
 }
 
-// Send constructs a new Request, prepares it with Open and then sends
-// it. The response corresponds to the request's ResponseText field,
-// or the empty string in case of an error.
+// Send constructs a new Request and sends it. The response
+// corresponds to the request's ResponseText field, or the empty
+// string in case of an error.
 //
 // Only errors of the network layer are treated as errors. HTTP status
 // codes 4xx and 5xx are not treated as errors. In order to check
 // status codes, use NewRequest instead.
-func Send(method, url, user, password string, data interface{}) (string, error) {
-	xhr := NewRequest()
-	xhr.Open(method, url, user, password)
+func Send(method, url string, data interface{}) (string, error) {
+	xhr := NewRequest(method, url)
 	err := xhr.Send(data)
 	if err != nil {
 		return "", err
