@@ -31,6 +31,7 @@ import (
 	"errors"
 
 	"github.com/gopherjs/gopherjs/js"
+	"honnef.co/go/js/util"
 )
 
 const (
@@ -54,10 +55,24 @@ type Request struct {
 	Status          int       `js:"status"`
 	StatusText      string    `js:"statusText"`
 	Timeout         int       `js:"timeout"`
-	Upload          js.Object `js:"upload"`
 	WithCredentials bool      `js:"withCredentials"`
 	// TODO provide callbacks for upload, state change and load
+
 	ch chan error
+}
+
+// Upload wraps XMLHttpRequestUpload objects.
+type Upload struct {
+	js.Object
+	util.EventTarget
+}
+
+// Upload returns the XMLHttpRequestUpload object associated with the
+// request. It can be used to register events for tracking the
+// progress of uploads.
+func (r *Request) Upload() *Upload {
+	o := r.Get("upload")
+	return &Upload{o, util.EventTarget{Object: o}}
 }
 
 // ErrAborted is the error returned by Send when a request was
