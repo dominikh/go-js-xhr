@@ -47,6 +47,7 @@ const (
 // request.
 type Request struct {
 	js.Object
+	util.EventTarget
 	ReadyState      int       `js:"readyState"`
 	Response        js.Object `js:"response"`
 	ResponseText    string    `js:"responseText"`
@@ -56,7 +57,6 @@ type Request struct {
 	StatusText      string    `js:"statusText"`
 	Timeout         int       `js:"timeout"`
 	WithCredentials bool      `js:"withCredentials"`
-	// TODO provide callbacks for upload, state change and load
 
 	ch chan error
 }
@@ -86,7 +86,7 @@ var ErrTimeout = errors.New("request timed out")
 // for a single request.
 func NewRequest() *Request {
 	o := js.Global.Get("XMLHttpRequest").New()
-	return &Request{Object: o}
+	return &Request{Object: o, EventTarget: util.EventTarget{Object: o}}
 }
 
 // ResponseHeaders returns all response headers.
@@ -137,13 +137,13 @@ func (r *Request) Send(data interface{}) error {
 		panic("must not use a Request for multiple requests")
 	}
 	r.ch = make(chan error, 1)
-	r.Call("addEventListener", "load", func() {
+	r.AddEventListener("load", false, func(js.Object) {
 		go func() { r.ch <- nil }()
 	})
-	r.Call("addEventListener", "error", func(o js.Object) {
+	r.AddEventListener("error", false, func(o js.Object) {
 		go func() { r.ch <- &js.Error{Object: o} }()
 	})
-	r.Call("addEventListener", "timeout", func() {
+	r.AddEventListener("timeout", false, func(js.Object) {
 		go func() { r.ch <- ErrTimeout }()
 	})
 	r.Call("send", data)
