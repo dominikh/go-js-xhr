@@ -9,7 +9,7 @@
 // additional event listeners.
 //
 //   r := xhr.NewRequest("GET", "/endpoint")
-//   r.SetTimeout(time.Second)
+//   r.Timeout = 1000 // one second, in milliseconds
 //   r.ResponseType = "document"
 //   err := r.Send(nil)
 //   if err != nil { handle_error() }
