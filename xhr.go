@@ -8,12 +8,12 @@
 // wants to abort in-flight requests or if one wants to register
 // additional event listeners.
 //
-//   r := xhr.NewRequest("GET", "/endpoint")
-//   r.Timeout = 1000 // one second, in milliseconds
-//   r.ResponseType = "document"
-//   err := r.Send(nil)
+//   req := xhr.NewRequest("GET", "/endpoint")
+//   req.Timeout = 1000 // one second, in milliseconds
+//   req.ResponseType = "document"
+//   err := req.Send(nil)
 //   if err != nil { handle_error() }
-//   // r.Response will contain a JavaScript Document element that can
+//   // req.Response will contain a JavaScript Document element that can
 //   // for example be used with the js/dom package.
 //
 //
