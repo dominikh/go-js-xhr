@@ -26,7 +26,7 @@
 //     if err != nil { handle_error() }
 //     console.Log("Retrieved data", data)
 //
-package xhr
+package xhr // import "honnef.co/go/js/xhr"
 
 import (
 	"errors"
