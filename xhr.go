@@ -112,7 +112,7 @@ func (r *Request) ResponseHeaders() string {
 // ResponseHeader returns the value of the specified header.
 func (r *Request) ResponseHeader(name string) string {
 	value := r.Call("getResponseHeader", name)
-	if value.IsNull() {
+	if value == nil {
 		return ""
 	}
 	return value.Str()
