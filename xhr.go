@@ -95,6 +95,14 @@ var ErrAborted = errors.New("request aborted")
 // ErrTimeout is the error returned by Send when a request timed out.
 var ErrTimeout = errors.New("request timed out")
 
+// ErrFailure is the error returned by Send when it failed for a
+// reason other than abortion or timeouts.
+//
+// The specific reason for the error is unknown because the XHR API
+// does not provide us with any information. One common reason is
+// network failure.
+var ErrFailure = errors.New("send failed")
+
 // NewRequest creates a new XMLHttpRequest object, which may be used
 // for a single request.
 func NewRequest(method, url string) *Request {
@@ -156,7 +164,7 @@ func (r *Request) Send(data interface{}) error {
 		go func() { r.ch <- nil }()
 	})
 	r.AddEventListener("error", false, func(o js.Object) {
-		go func() { r.ch <- &js.Error{Object: o} }()
+		go func() { r.ch <- ErrFailure }()
 	})
 	r.AddEventListener("timeout", false, func(js.Object) {
 		go func() { r.ch <- ErrTimeout }()
