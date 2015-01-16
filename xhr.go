@@ -114,7 +114,7 @@ func NewRequest(method, url string) *Request {
 
 // ResponseHeaders returns all response headers.
 func (r *Request) ResponseHeaders() string {
-	return r.Call("getAllResponseHeaders").Str()
+	return r.Call("getAllResponseHeaders").String()
 }
 
 // ResponseHeader returns the value of the specified header.
@@ -123,7 +123,7 @@ func (r *Request) ResponseHeader(name string) string {
 	if value == nil {
 		return ""
 	}
-	return value.Str()
+	return value.String()
 }
 
 // Abort will abort the request. The corresponding Send will return
@@ -155,7 +155,7 @@ func (r *Request) OverrideMimeType(mimetype string) {
 // Only errors of the network layer are treated as errors. HTTP status
 // codes 4xx and 5xx are not treated as errors. In order to check
 // status codes, use the Request's Status field.
-func (r *Request) Send(data interface{}) error {
+func (r *Request) Send(data js.Any) error {
 	if r.ch != nil {
 		panic("must not use a Request for multiple requests")
 	}
@@ -186,7 +186,7 @@ func (r *Request) SetRequestHeader(header, value string) {
 // Only errors of the network layer are treated as errors. HTTP status
 // codes 4xx and 5xx are not treated as errors. In order to check
 // status codes, use NewRequest instead.
-func Send(method, url string, data interface{}) (string, error) {
+func Send(method, url string, data js.Any) (string, error) {
 	xhr := NewRequest(method, url)
 	err := xhr.Send(data)
 	if err != nil {
