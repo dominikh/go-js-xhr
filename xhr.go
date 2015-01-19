@@ -155,7 +155,7 @@ func (r *Request) OverrideMimeType(mimetype string) {
 // Only errors of the network layer are treated as errors. HTTP status
 // codes 4xx and 5xx are not treated as errors. In order to check
 // status codes, use the Request's Status field.
-func (r *Request) Send(data js.Any) error {
+func (r *Request) Send(data interface{}) error {
 	if r.ch != nil {
 		panic("must not use a Request for multiple requests")
 	}
@@ -186,7 +186,7 @@ func (r *Request) SetRequestHeader(header, value string) {
 // Only errors of the network layer are treated as errors. HTTP status
 // codes 4xx and 5xx are not treated as errors. In order to check
 // status codes, use NewRequest instead.
-func Send(method, url string, data js.Any) (string, error) {
+func Send(method, url string, data interface{}) (string, error) {
 	xhr := NewRequest(method, url)
 	err := xhr.Send(data)
 	if err != nil {
