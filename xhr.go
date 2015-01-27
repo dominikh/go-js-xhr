@@ -146,9 +146,11 @@ func (r *Request) OverrideMimeType(mimetype string) {
 }
 
 // Send sends the request that was prepared with Open. The data
-// argument is optional and can either be a string payload, or a
-// js.Object containing an ArrayBufferView, Blob, Document or
-// Formdata.
+// argument is optional and can either be a string or []byte payload,
+// or a js.Object containing an ArrayBufferView, Blob, Document or
+// Formdata. Binary data should not be sent as a string, as the
+// process of externalising it involves encoding-related
+// transformations.
 //
 // Send will block until a response was received or an error occured.
 //
@@ -181,7 +183,8 @@ func (r *Request) SetRequestHeader(header, value string) {
 
 // Send constructs a new Request and sends it. The response
 // corresponds to the request's ResponseText field, or the empty
-// string in case of an error.
+// string in case of an error. For details about the data parameter,
+// see the documentation of Request.Send.
 //
 // Only errors of the network layer are treated as errors. HTTP status
 // codes 4xx and 5xx are not treated as errors. In order to check
