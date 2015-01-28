@@ -187,13 +187,15 @@ func (r *Request) SetRequestHeader(header, value string) {
 }
 
 // Send constructs a new Request and sends it. The response, if any,
-// is interpreted as binary data and returned as is. For details about
-// the data parameter, see the documentation of Request.Send.
+// is interpreted as binary data and returned as is.
+//
+// For more control over the request, as well as the option to send
+// types other than []byte, construct a Request yourself.
 //
 // Only errors of the network layer are treated as errors. HTTP status
 // codes 4xx and 5xx are not treated as errors. In order to check
 // status codes, use NewRequest instead.
-func Send(method, url string, data interface{}) ([]byte, error) {
+func Send(method, url string, data []byte) ([]byte, error) {
 	xhr := NewRequest(method, url)
 	xhr.ResponseType = ArrayBuffer
 	err := xhr.Send(data)
