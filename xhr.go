@@ -58,6 +58,15 @@ const (
 // Request wraps XMLHttpRequest objects. New instances have to be
 // created with NewRequest. Each instance may only be used for a
 // single request.
+//
+// To create a request that behaves in the same way as the top-level
+// Send function with regard to handling binary data, use the
+// following:
+//
+//   req := xhr.NewRequest("POST", "http://example.com")
+//   req.ResponseType = xhr.ArrayBuffer
+//   req.Send([]byte("data"))
+//   b := js.Global.Get("Uint8Array").New(req.Response).Interface().([]byte)
 type Request struct {
 	js.Object
 	util.EventTarget
@@ -148,8 +157,7 @@ func (r *Request) OverrideMimeType(mimetype string) {
 // Send sends the request that was prepared with Open. The data
 // argument is optional and can either be a string or []byte payload,
 // or a js.Object containing an ArrayBufferView, Blob, Document or
-// Formdata. String and []byte arguments will be sent as binary data,
-// without any transformations.
+// Formdata.
 //
 // Send will block until a response was received or an error occured.
 //
@@ -170,11 +178,6 @@ func (r *Request) Send(data interface{}) error {
 	r.AddEventListener("timeout", false, func(js.Object) {
 		go func() { r.ch <- ErrTimeout }()
 	})
-
-	// Send strings as binary data
-	if s, ok := data.(string); ok {
-		data = []byte(s)
-	}
 
 	r.Call("send", data)
 	val := <-r.ch
