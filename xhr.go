@@ -148,9 +148,8 @@ func (r *Request) OverrideMimeType(mimetype string) {
 // Send sends the request that was prepared with Open. The data
 // argument is optional and can either be a string or []byte payload,
 // or a js.Object containing an ArrayBufferView, Blob, Document or
-// Formdata. Binary data should not be sent as a string, as the
-// process of externalising it involves encoding-related
-// transformations.
+// Formdata. String and []byte arguments will be sent as binary data,
+// without any transformations.
 //
 // Send will block until a response was received or an error occured.
 //
@@ -171,6 +170,12 @@ func (r *Request) Send(data interface{}) error {
 	r.AddEventListener("timeout", false, func(js.Object) {
 		go func() { r.ch <- ErrTimeout }()
 	})
+
+	// Send strings as binary data
+	if s, ok := data.(string); ok {
+		data = []byte(s)
+	}
+
 	r.Call("send", data)
 	val := <-r.ch
 	return val
@@ -181,19 +186,19 @@ func (r *Request) SetRequestHeader(header, value string) {
 	r.Call("setRequestHeader", header, value)
 }
 
-// Send constructs a new Request and sends it. The response
-// corresponds to the request's ResponseText field, or the empty
-// string in case of an error. For details about the data parameter,
-// see the documentation of Request.Send.
+// Send constructs a new Request and sends it. The response, if any,
+// is interpreted as binary data and returned as is. For details about
+// the data parameter, see the documentation of Request.Send.
 //
 // Only errors of the network layer are treated as errors. HTTP status
 // codes 4xx and 5xx are not treated as errors. In order to check
 // status codes, use NewRequest instead.
-func Send(method, url string, data interface{}) (string, error) {
+func Send(method, url string, data interface{}) ([]byte, error) {
 	xhr := NewRequest(method, url)
+	xhr.ResponseType = ArrayBuffer
 	err := xhr.Send(data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return xhr.ResponseText, nil
+	return js.Global.Get("Uint8Array").New(xhr.Response).Interface().([]byte), nil
 }
