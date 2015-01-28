@@ -22,7 +22,7 @@
 // it. It's the easiest way of doing an XHR request that should just
 // return unprocessed data.
 //
-//     data, err := xhr.Send("GET", "/endpoint", nil)
+//     data, err := xhr.Send("POST", "/endpoint", []byte("payload here"))
 //     if err != nil { handle_error() }
 //     console.Log("Retrieved data", data)
 //
