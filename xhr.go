@@ -68,24 +68,24 @@ const (
 //   req.Send([]byte("data"))
 //   b := js.Global.Get("Uint8Array").New(req.Response).Interface().([]byte)
 type Request struct {
-	js.Object
+	*js.Object
 	util.EventTarget
-	ReadyState      int       `js:"readyState"`
-	Response        js.Object `js:"response"`
-	ResponseText    string    `js:"responseText"`
-	ResponseType    string    `js:"responseType"`
-	ResponseXML     js.Object `js:"responseXML"`
-	Status          int       `js:"status"`
-	StatusText      string    `js:"statusText"`
-	Timeout         int       `js:"timeout"`
-	WithCredentials bool      `js:"withCredentials"`
+	ReadyState      int        `js:"readyState"`
+	Response        *js.Object `js:"response"`
+	ResponseText    string     `js:"responseText"`
+	ResponseType    string     `js:"responseType"`
+	ResponseXML     *js.Object `js:"responseXML"`
+	Status          int        `js:"status"`
+	StatusText      string     `js:"statusText"`
+	Timeout         int        `js:"timeout"`
+	WithCredentials bool       `js:"withCredentials"`
 
 	ch chan error
 }
 
 // Upload wraps XMLHttpRequestUpload objects.
 type Upload struct {
-	js.Object
+	*js.Object
 	util.EventTarget
 }
 
@@ -156,7 +156,7 @@ func (r *Request) OverrideMimeType(mimetype string) {
 
 // Send sends the request that was prepared with Open. The data
 // argument is optional and can either be a string or []byte payload,
-// or a js.Object containing an ArrayBufferView, Blob, Document or
+// or a *js.Object containing an ArrayBufferView, Blob, Document or
 // Formdata.
 //
 // Send will block until a response was received or an error occured.
@@ -169,13 +169,13 @@ func (r *Request) Send(data interface{}) error {
 		panic("must not use a Request for multiple requests")
 	}
 	r.ch = make(chan error, 1)
-	r.AddEventListener("load", false, func(js.Object) {
+	r.AddEventListener("load", false, func(*js.Object) {
 		go func() { r.ch <- nil }()
 	})
-	r.AddEventListener("error", false, func(o js.Object) {
+	r.AddEventListener("error", false, func(o *js.Object) {
 		go func() { r.ch <- ErrFailure }()
 	})
-	r.AddEventListener("timeout", false, func(js.Object) {
+	r.AddEventListener("timeout", false, func(*js.Object) {
 		go func() { r.ch <- ErrTimeout }()
 	})
 
