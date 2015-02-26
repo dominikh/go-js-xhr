@@ -1,12 +1,12 @@
 // Package xhr provides GopherJS bindings for the XMLHttpRequest API.
 //
-// This package provides two ways of using XHR. The first one is via
-// the Request type and the NewRequest function. This way, one can
-// specify all desired details of the request's behaviour (timeout,
-// response format). It also allows access to response details such as
-// the status code. Furthermore, using this way is required if one
-// wants to abort in-flight requests or if one wants to register
-// additional event listeners.
+// This package provides two ways of using XHR directly. The first one
+// is via the Request type and the NewRequest function. This way, one
+// can specify all desired details of the request's behaviour
+// (timeout, response format). It also allows access to response
+// details such as the status code. Furthermore, using this way is
+// required if one wants to abort in-flight requests or if one wants
+// to register additional event listeners.
 //
 //   req := xhr.NewRequest("GET", "/endpoint")
 //   req.Timeout = 1000 // one second, in milliseconds
@@ -26,10 +26,33 @@
 //     if err != nil { handle_error() }
 //     console.Log("Retrieved data", data)
 //
+//
+// Additionally, package xhr provides the Transport type, an
+// implementation of the http.RoundTripper interface. This allows
+// using the net/http package directly, using XHR in the background.
+// Example:
+//
+//		client := http.Client{Transport: &xhr.Transport{}}
+//		resp, err := client.Get("http://localhost:9911/api_endpoint")
+//		if err != nil {
+//			// handle error
+//		}
+//		defer resp.Body.Close()
+//		// do stuff with resp.Body
+
 package xhr // import "honnef.co/go/js/xhr"
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"net/textproto"
+	"strings"
+	"sync"
 
 	"github.com/gopherjs/gopherjs/js"
 	"honnef.co/go/js/util"
@@ -206,4 +229,98 @@ func Send(method, url string, data []byte) ([]byte, error) {
 		return nil, err
 	}
 	return js.Global.Get("Uint8Array").New(xhr.Response).Interface().([]byte), nil
+}
+
+type Transport struct {
+	mu       sync.Mutex
+	inflight map[*http.Request]*Request
+}
+
+func (t *Transport) setCanceler(req *http.Request, x *Request) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.inflight == nil {
+		t.inflight = map[*http.Request]*Request{}
+	}
+	if x == nil {
+		delete(t.inflight, req)
+		return
+	}
+	t.inflight[req] = x
+}
+
+func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Host != "" {
+		return nil, errors.New("cannot set Host header with XHR")
+	}
+
+	x := NewRequest(req.Method, req.URL.String())
+	x.ResponseType = ArrayBuffer
+
+	for k, v := range req.Header {
+		for _, vv := range v {
+			x.SetRequestHeader(k, vv)
+		}
+	}
+
+	var data []byte
+	var err error
+	if req.Body != nil {
+		defer req.Body.Close()
+		data, err = ioutil.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// FIXME(dominikh): If CancelRequest is called before we can call
+	// x.Send, the cancellation will have no effect
+	t.setCanceler(req, x)
+	err = x.Send(data)
+	t.setCanceler(req, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if x.Response == nil {
+		// the request got cancelled after it was done, and in that
+		// case JS clears the Response field. Treat it like a request
+		// that was aborted in time.
+		return nil, ErrAborted
+	}
+
+	r := strings.NewReader(x.ResponseHeaders())
+	headers, err := textproto.NewReader(bufio.NewReader(r)).ReadMIMEHeader()
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	var proto string
+	var major, minor int
+	if len(headers["Version"]) > 0 {
+		proto = headers["Version"][0]
+		major, minor, _ = http.ParseHTTPVersion(proto)
+	}
+
+	b := js.Global.Get("Uint8Array").New(x.Response).Interface().([]byte)
+	return &http.Response{
+		Status:        fmt.Sprintf("%d %s", x.Status, x.StatusText),
+		StatusCode:    x.Status,
+		Proto:         proto,
+		ProtoMajor:    major,
+		ProtoMinor:    minor,
+		Header:        http.Header(headers),
+		Body:          ioutil.NopCloser(bytes.NewReader(b)),
+		ContentLength: int64(len(b)),
+		// FIXME(dominikh): Go docs say the request's body will be nil
+		Request: req,
+	}, nil
+}
+
+func (t *Transport) CancelRequest(req *http.Request) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if x := t.inflight[req]; x != nil {
+		x.Abort()
+	}
 }
