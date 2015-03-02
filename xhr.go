@@ -39,7 +39,6 @@
 //		}
 //		defer resp.Body.Close()
 //		// do stuff with resp.Body
-
 package xhr // import "honnef.co/go/js/xhr"
 
 import (
