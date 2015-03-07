@@ -27,18 +27,10 @@
 //     console.Log("Retrieved data", data)
 //
 //
-// Additionally, package xhr/transport provides the Transport type, an
-// implementation of the http.RoundTripper interface. This allows
-// using the net/http package directly, using XHR in the background.
-// Example:
-//
-//		client := http.Client{Transport: &xhr.Transport{}}
-//		resp, err := client.Get("http://localhost:9911/api_endpoint")
-//		if err != nil {
-//			// handle error
-//		}
-//		defer resp.Body.Close()
-//		// do stuff with resp.Body
+// If you don't need to/want to deal with the underlying details of
+// XHR, you may also just use the net/http.DefaultTransport, which
+// GopherJS replaces with an XHR-enabled version, making this package
+// useless most of the time.
 package xhr // import "honnef.co/go/js/xhr"
 
 import (
